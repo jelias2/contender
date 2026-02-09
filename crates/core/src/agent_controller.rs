@@ -8,7 +8,7 @@ use alloy::{
     rpc::types::TransactionRequest,
     signers::local::PrivateKeySigner,
 };
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc};
 use tracing::{debug, info};
 
 pub trait SignerRegistry<Index: Ord> {
@@ -189,33 +189,24 @@ impl SignerStore {
         }
 
         // send txs
-        let num_signers = signed_txs.len();
-        info!("funding {} signer(s), sending txs...", num_signers);
         let mut sent_txs = vec![];
-        for (i, (signed_tx, to_addr)) in signed_txs.into_iter().enumerate() {
+        for (signed_tx, to_addr) in signed_txs {
             let provider = provider.clone();
 
             // Sleep to avoid overwhelming the provider with requests
-            tokio::time::sleep(Duration::from_millis(10)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
             let pending_tx = provider
                 .send_tx_envelope(AnyTxEnvelope::Ethereum(signed_tx))
                 .await?;
             sent_txs.push(pending_tx);
             info!("Funding {to_addr} with {} ether", format_ether(amount));
-            if (i + 1) % 25 == 0 || i == num_signers - 1 {
-                info!("funding progress: sent {}/{} txs", i + 1, num_signers);
-            }
         }
 
-        for (i, tx) in sent_txs.into_iter().enumerate() {
+        for tx in sent_txs {
             let tx_hash = tx.with_required_confirmations(1).watch().await?;
             debug!("funding tx landed: {tx_hash}");
-            if (i + 1) % 25 == 0 || i == num_signers - 1 {
-                info!("funding progress: confirmed {}/{} txs", i + 1, num_signers);
-            }
         }
-        info!("funding complete: all {} txs confirmed", num_signers);
 
         Ok(())
     }

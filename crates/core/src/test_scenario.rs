@@ -363,17 +363,16 @@ where
                 .network::<AnyNetwork>()
                 .connect_http(endpoint_url.to_owned());
 
-            let elapsed_secs = start.elapsed().as_secs();
             match tokio::time::timeout(Duration::from_secs(2), provider.get_block_number()).await {
                 Ok(Ok(_block_num)) => {
-                    info!("anvil ready at {} (after {}s)", endpoint_url, elapsed_secs);
+                    info!("anvil ready at {}", endpoint_url);
                     return Ok(());
                 }
                 Ok(Err(e)) => {
-                    info!("anvil not ready yet ({}s elapsed): {}, retrying...", elapsed_secs, e);
+                    info!("anvil not ready yet (error: {}), retrying...", e);
                 }
                 Err(_) => {
-                    info!("anvil health check timed out ({}s elapsed), retrying...", elapsed_secs);
+                    info!("anvil health check timed out, retrying...");
                 }
             }
 
@@ -381,13 +380,8 @@ where
         }
     }
 
-    /// Runs a short simulation on a temporary anvil instance (optionally forked from the target chain)
-    /// to estimate the total ETH cost of setup: funding agent accounts, deploying contracts, and
-    /// running setup transactions. With high account counts, funding and confirmation wait can be
-    /// slow; each funding tx has a 60s confirmation timeout and progress is logged.
     pub async fn estimate_setup_cost(&self) -> Result<U256> {
         println!("{}", SETUP_SIM_START);
-        let sim_start = std::time::Instant::now();
 
         // use user-provided gas price or get gas price from chain to approximate gas cost
         let gas_price = match self.gas_price {
@@ -416,9 +410,7 @@ where
         }
 
         let anvil = anvil.try_spawn()?;
-        info!("anvil simulation: waiting for anvil to be ready (timeout 30s)...");
         Self::wait_for_anvil_ready(&anvil.endpoint_url(), Duration::from_secs(30)).await?;
-        info!("anvil simulation: anvil ready in {:?}", sim_start.elapsed());
 
         let admin_signer = LocalSigner::from_str(
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
@@ -466,12 +458,6 @@ where
             .all_signer_addresses()
             .into_iter()
             .collect::<Vec<Address>>();
-        let num_agents = scenario.agent_store.all_agents().count();
-        info!(
-            "anvil simulation: {} addresses across {} agent(s), fetching balances...",
-            addresses.len(),
-            num_agents
-        );
 
         let fund_amount = if addresses.len() >= 999 {
             U256::from(999999 * ETH_TO_WEI / addresses.len() as u128)
@@ -485,22 +471,17 @@ where
             start_balances.insert(*addr, bal + fund_amount);
         }
 
-        info!("anvil simulation: funding agents (timeout 60s per signer)...");
-        for (agent_idx, (_name, agent)) in scenario.agent_store.all_agents().enumerate() {
-            info!("anvil simulation: funding agent {} ({} signers)", agent_idx + 1, agent.signers.len());
+        for (_name, agent) in scenario.agent_store.all_agents() {
             agent
                 .fund_signers(&admin_signer, fund_amount, scenario.rpc_client.clone())
                 .await?;
         }
-        info!("anvil simulation: funding done in {:?}", sim_start.elapsed());
 
-        info!("anvil simulation: deploying contracts...");
+        debug!("deploying sim contracts...");
         scenario.deploy_contracts().await?;
         scenario.sync_nonces().await?;
-        info!("anvil simulation: contracts deployed in {:?}", sim_start.elapsed());
-        info!("anvil simulation: running setup txs...");
+        debug!("sim contracts deployed, running setup...");
         scenario.run_setup().await?;
-        info!("anvil simulation: setup done in {:?}", sim_start.elapsed());
 
         let mut total_cost = U256::ZERO;
         for (addr, start_balance) in &start_balances {
@@ -513,11 +494,7 @@ where
         }
 
         println!("{}", SETUP_SIM_END);
-        info!(
-            "anvil simulation: complete in {:?}, estimated setup cost: {} ether",
-            sim_start.elapsed(),
-            format_ether(total_cost)
-        );
+        debug!("estimated setup cost: {}", format_ether(total_cost));
 
         // Shutdown the temporary simulation scenario to stop its actors
         scenario.shutdown().await;
