@@ -17,7 +17,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-CONTENDER_BIN=""
+# CONTENDER_BIN=""
+CONTENDER_BIN="./target/debug/contender"
 if [ -x "./target/release/contender" ]; then
     CONTENDER_BIN="./target/release/contender"
 elif [ -x "./target/debug/contender" ]; then
@@ -66,13 +67,16 @@ run_config() {
             echo -e "${RED}Scenario not found: $SCENARIO_PATH${NC}" >&2
             return 1
         fi
+        echo -e "${GREEN}Command (setup): $CONTENDER_BIN setup $SCENARIO_PATH $RPC_URL -p *** --min-balance 0.25${NC}"
         echo -e "${YELLOW}Running setup...${NC}"
         "$CONTENDER_BIN" setup "$SCENARIO_PATH" "$RPC_URL" -p "$PRIVATE_KEY" --min-balance 0.25
+        echo -e "${GREEN}Command (spam): $CONTENDER_BIN spam $SCENARIO_PATH $RPC_URL -p *** -d $DURATION --tps $TPS --accounts $ACCOUNTS --rpc-batch-size $RPC_BATCH_SIZE --min-balance 0.05 ${extra[*]}${NC}"
         echo -e "${YELLOW}Running spam...${NC}"
         "$CONTENDER_BIN" spam "$SCENARIO_PATH" "$RPC_URL" -p "$PRIVATE_KEY" \
             -d "$DURATION" --tps "$TPS" --accounts "$ACCOUNTS" --rpc-batch-size "$RPC_BATCH_SIZE" \
             --min-balance 0.05 "${extra[@]}"
     else
+        echo -e "${GREEN}Command: $CONTENDER_BIN spam -r $RPC_URL -p *** -d $DURATION --tps $TPS --accounts $ACCOUNTS --rpc-batch-size $RPC_BATCH_SIZE -t $TX_TYPE ${extra[*]} $TEST_TYPE${NC}"
         "$CONTENDER_BIN" spam -r "$RPC_URL" -p "$PRIVATE_KEY" -d "$DURATION" \
             --tps "$TPS" --accounts "$ACCOUNTS" --rpc-batch-size "$RPC_BATCH_SIZE" \
             -t "$TX_TYPE" "${extra[@]}" "$TEST_TYPE"
