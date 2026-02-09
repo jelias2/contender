@@ -14,6 +14,7 @@ use contender_core::generator::types::AnyProvider;
 use contender_core::util::get_block_time;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::time::Duration;
 use tracing::{debug, info, warn};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -153,22 +154,43 @@ pub async fn get_block_traces(
             let sender = sender.clone();
             let task = tokio::task::spawn(async move {
                 debug!("tracing tx {tx_hash:?}");
-                let trace = rpc_client
-                    .debug_trace_transaction(
-                        tx_hash,
-                        GethDebugTracingOptions {
-                            config: GethDefaultTracingOptions::default(),
-                            tracer: Some(GethDebugTracerType::BuiltInTracer(
-                                GethDebugBuiltInTracerType::PreStateTracer,
-                            )),
-                            tracer_config: GethDebugTracerConfig::default(),
-                            timeout: None,
-                        },
-                    )
-                    .await
-                    .inspect_err(|_| {
-                        warn!("debug_traceTransaction failed. Make sure geth-style tracing is enabled on your node.");
-                    })?;
+                const MAX_DEBUG_TRACE_ATTEMPTS: u32 = 3;
+                const RETRY_DELAY_MS: u64 = 500;
+
+                let mut trace = None;
+                for attempt in 1..=MAX_DEBUG_TRACE_ATTEMPTS {
+                    match rpc_client
+                        .debug_trace_transaction(
+                            tx_hash,
+                            GethDebugTracingOptions {
+                                config: GethDefaultTracingOptions::default(),
+                                tracer: Some(GethDebugTracerType::BuiltInTracer(
+                                    GethDebugBuiltInTracerType::PreStateTracer,
+                                )),
+                                tracer_config: GethDebugTracerConfig::default(),
+                                timeout: None,
+                            },
+                        )
+                        .await
+                    {
+                        Ok(t) => {
+                            trace = Some(t);
+                            break;
+                        }
+                        Err(e) => {
+                            warn!(
+                                "debug_traceTransaction failed for tx {tx_hash:?} (attempt {attempt}/{MAX_DEBUG_TRACE_ATTEMPTS}): {e}. \
+                                Make sure geth-style tracing is enabled on your node."
+                            );
+                            if attempt < MAX_DEBUG_TRACE_ATTEMPTS {
+                                tokio::time::sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
+                            } else {
+                                return Err(e.into());
+                            }
+                        }
+                    }
+                }
+                let trace = trace.expect("trace set in loop");
 
                 // receipt might fail if we target a non-ETH chain
                 // so if it does fail, we just ignore it
