@@ -1,0 +1,14 @@
+# ERC20-only campaign (replicates op-benchmark erc20-campaign style).
+# Single scenario at fixed TPS for campaign-mode e2e tests.
+
+name = "erc20-campaign"
+description = "100% ERC20 at fixed TPS"
+
+[spam]
+mode = "tps"
+rate = 30
+duration = 20
+
+[[spam.mix]]
+scenario = "erc20"
+share_pct = 100.0

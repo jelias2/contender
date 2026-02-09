@@ -64,6 +64,16 @@ This directory contains preset configurations for running Contender spam tests w
 - **RPC**: http://localhost:8545
 - **Use Case**: Local development, testing against local node
 
+### OP Benchmark (bare bones)
+
+The **`op-benchmark/`** directory holds configs that replicate k8s/kustomize op-benchmark–style test cases using only Contender (no Kubernetes). Use the script from repo root:
+
+```bash
+./scripts/run-op-benchmark.sh <case>   # case: low, medium, high, stress, blobs, transfers, univ2, l2-mint-send, all
+```
+
+See **`op-benchmark/README.md`** for the full list of cases and manual commands.
+
 ## Usage
 
 ### Using a Preset Configuration
