@@ -52,15 +52,15 @@ Usage:
   ./run.sh --help                     Show this help
 
 ${BLUE}Available Preset Configurations:${NC}
-  low-tps        - Low TPS (10 TPS, 5 accounts) - Good for debugging
-  medium-tps     - Medium TPS (50 TPS, 25 accounts) - Balanced testing
-  high-tps       - High TPS (200 TPS, 100 accounts) - Stress testing
-  stress-test    - Extreme (500 TPS, 200 accounts) - Maximum stress
-  blob-test      - Blob transactions (EIP-4844)
-  transfers-test - Simple ETH transfers (100 TPS)
-  univ2-test     - UniswapV2 swaps (30 TPS)
-  storage-test   - Storage operations (40 TPS)
-  localhost      - Local development setup
+  <test-type>/<preset>  e.g. erc20/low, erc20/medium, erc20/high
+  stress/high           - Extreme (500 TPS, 200 accounts)
+  blobs/default         - Blob transactions (EIP-4844)
+  transfers/default    - Simple ETH transfers
+  univ2/default        - UniswapV2 swaps
+  storage/default      - Storage operations
+  l2-mint-send/default  - L2 mint + SuperchainTokenBridge (scenario file)
+  localhost/default    - Local development setup
+  Run ./run.sh --list-configs to see all.
 
 ${BLUE}Custom Options:${NC}
   -r, --rpc URL              RPC endpoint URL
@@ -75,10 +75,10 @@ ${BLUE}Custom Options:${NC}
   --list-test-types          List all available test types
 
 ${BLUE}Examples:${NC}
-  ./run.sh medium-tps                           # Use medium-tps preset
+  ./run.sh erc20/medium                         # Use erc20 medium preset
   ./run.sh --tps 100 --accounts 50              # Custom TPS and accounts
-  ./run.sh -r http://localhost:8545 --tps 25    # Custom RPC and TPS
-  ./run.sh stress-test --duration 600           # Override duration in preset
+  ./run.sh -r http://localhost:8545 --tps 25   # Custom RPC and TPS
+  ./run.sh stress/high --duration 600           # Override duration in preset
 
 ${YELLOW}Note:${NC} PRIVATE_KEY environment variable must be set or provided via -p flag
 EOF
@@ -88,9 +88,10 @@ EOF
 # Function to list configurations
 list_configs() {
     echo -e "${GREEN}Available Configurations:${NC}\n"
-    for config in configs/*.env; do
+    for config in configs/*/*.env; do
         if [ -f "$config" ]; then
-            name=$(basename "$config" .env)
+            name="${config#configs/}"
+            name="${name%.env}"
             echo -e "${BLUE}$name${NC}"
             grep "^#" "$config" | head -n 2 | sed 's/^# /  /'
             echo
@@ -239,7 +240,34 @@ if [ -z "$PRIVATE_KEY" ]; then
     exit 1
 fi
 
-# Display configuration
+# Scenario-file flow (e.g. l2-mint-send): setup then spam
+if [ -n "${SCENARIO_PATH:-}" ]; then
+    echo -e "\n${GREEN}=== Contender Scenario (setup + spam) ===${NC}"
+    echo -e "${BLUE}RPC URL:${NC}      $RPC_URL"
+    echo -e "${BLUE}Scenario:${NC}     $SCENARIO_PATH"
+    echo -e "${BLUE}Duration:${NC}    ${DURATION}s"
+    echo -e "${BLUE}TPS:${NC}          $TPS"
+    echo -e "${BLUE}Accounts:${NC}     $ACCOUNTS"
+    echo -e "${GREEN}=========================================${NC}\n"
+    read -p "$(echo -e ${YELLOW}Continue? [Y/n]:${NC} )" -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]] && [[ -n $REPLY ]]; then
+        print_warning "Aborted by user"
+        exit 0
+    fi
+    CONTENDER_BIN="./target/debug/contender"
+    [ -x "./target/release/contender" ] && CONTENDER_BIN="./target/release/contender"
+    print_info "Running setup..."
+    $CONTENDER_BIN setup "$SCENARIO_PATH" "$RPC_URL" -p "$PRIVATE_KEY" --min-balance 0.25
+    print_info "Running spam..."
+    $CONTENDER_BIN spam "$SCENARIO_PATH" "$RPC_URL" -p "$PRIVATE_KEY" \
+        -d "$DURATION" --tps "$TPS" --accounts "$ACCOUNTS" --rpc-batch-size "$RPC_BATCH_SIZE" \
+        --min-balance 0.05
+    print_success "Scenario run completed!"
+    exit 0
+fi
+
+# Display configuration (built-in spam)
 echo -e "\n${GREEN}=== Contender Spam Configuration ===${NC}"
 echo -e "${BLUE}RPC URL:${NC}         $RPC_URL"
 echo -e "${BLUE}Duration:${NC}        ${DURATION}s"
