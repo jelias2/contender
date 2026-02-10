@@ -5,3 +5,14 @@ cargotest.toml
 report.csv
 
 .DS_Store
+
+# Remote testing sensitive files
+scripts/remote-testing/.env
+scripts/remote-testing/*.pem
+scripts/remote-testing/*.key
+scripts/remote-testing/contender-vm
+scripts/remote-testing/us/
+scripts/remote-testing/jp/
+
+# Test results directories
+test-results-*/

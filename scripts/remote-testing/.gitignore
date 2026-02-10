@@ -1,0 +1,20 @@
+# Sensitive configuration
+.env
+
+# SSH keys
+*.pem
+*.key
+contender-vm
+id_rsa*
+
+# Test results and reports
+us/
+jp/
+*.csv
+*.html
+*.txt
+
+# Temporary files
+*.log
+*.tmp
+/tmp/

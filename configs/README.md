@@ -2,6 +2,8 @@
 
 This directory contains preset configurations for running Contender spam tests, grouped by **test type**. Each test type has a subdirectory with one or more preset files (e.g. `erc20/low.env`, `erc20/medium.env`).
 
+These configurations work for both local testing (via `run.sh`) and remote testing (via `scripts/remote-testing/run-all-tests.sh`).
+
 ## Available Configurations
 
 Config names are **`<test-type>/<preset>`**. Run `./run.sh --list-configs` to see the full list.

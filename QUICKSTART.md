@@ -1,8 +1,14 @@
-# Contender Local Run - Quick Start Guide
+# Contender Testing - Quick Start Guide
 
-This guide will help you quickly start running Contender spam tests with various configurations.
+This guide will help you quickly start running Contender spam tests with various configurations, both locally and on remote VMs.
 
-## Prerequisites
+## Testing Options
+
+- **Local Testing** - Run tests on your local machine (see below)
+- **Remote Testing** - Run automated tests on remote VMs across multiple regions
+  - See [`scripts/remote-testing/README.md`](scripts/remote-testing/README.md) for setup and usage
+
+## Local Testing Prerequisites
 
 1. Set your private key environment variable:
    ```bash
@@ -254,9 +260,25 @@ export PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f
 ./run.sh --tps 10 --accounts 5 --test-type blobs --tx-type eip4844 --duration 60
 ```
 
+## Remote Testing
+
+For running tests on remote VMs (multi-region benchmarking):
+
+1. See [`scripts/remote-testing/README.md`](scripts/remote-testing/README.md) for detailed setup
+2. Configure your VMs in `scripts/remote-testing/.env`
+3. Run automated test suites across multiple regions
+
+```bash
+cd scripts/remote-testing
+cp .env.example .env
+# Edit .env with your VM details
+./run-all-tests.sh
+```
+
 ## Next Steps
 
 - Explore `configs/README.md` for detailed configuration documentation
 - Check `scripts/` directory for additional helper tools
+- Set up remote testing for multi-region benchmarks (see `scripts/remote-testing/`)
 - Create custom configurations for your specific testing needs
 - Run batch tests to compare different scenarios

@@ -82,5 +82,10 @@ It supports both **per-second** (TPS) and **per-block** (TPB) timing, seeded fuz
 - [Using Contender as a Library](docs/library-usage.md)
 - [Composite Campaigns](docs/campaigns.md)
 
-### 5. Internals
+### 5. Automated Testing & Scripting
+- [Local Testing Quick Start](QUICKSTART.md) - Run configurable local tests
+- [Scripts Overview](scripts/README.md) - Helper scripts for batch testing and validation
+- [Remote Testing Setup](scripts/remote-testing/README.md) - Multi-region automated benchmarking with cloned VMs
+
+### 6. Internals
 - [Architecture](docs/architecture.md)
