@@ -49,6 +49,7 @@ Standalone query scripts. Each accepts optional `[db_path]` and, for run-specifi
 | **mgas-per-second.sh** | **Average MGas/s** over the test range (total gas used by mined txs ÷ time span). |
 | **mgas-per-block.sh** | **Average total MGas per block** over the test range (mean of sum(gas_used) per block). |
 | **avg-tps-per-block.sh** | **Average TPS per block** (mean transaction count per block). |
+| **max-tps-per-block.sh** | **Max TPS per block**: block with the highest tx count; outputs `block_number` and `tx_count`. |
 
 ```bash
 # From repo root
@@ -58,6 +59,7 @@ Standalone query scripts. Each accepts optional `[db_path]` and, for run-specifi
 ./post-processing/queries/mgas-per-second.sh
 ./post-processing/queries/mgas-per-block.sh
 ./post-processing/queries/avg-tps-per-block.sh
+./post-processing/queries/max-tps-per-block.sh
 
 # With a specific DB
 ./post-processing/queries/txs-per-block.sh /path/to/contender.db
